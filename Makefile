@@ -1,18 +1,16 @@
 CC = clang-19
-CFLAGS = -std=c23 -Wall -Wextra -g -no-pie
+CFLAGS = -std=c11 -Wall -Wextra -pedantic
 
 .PHONY: all clean
 
 all : clean alloc
+	./alloc
 
-alloc : alloc.o heap.o
+alloc : alloc.o
 	$(CC) $(CFLAGS) $^ -o $@
 
 alloc.o : alloc.c alloc.h
 	$(CC) $(CFLAGS) -c $<
-
-heap.o : heap.asm
-	nasm -f elf64 $^
 
 clean:
 	rm -rf *.o alloc

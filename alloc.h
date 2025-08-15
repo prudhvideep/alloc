@@ -1,46 +1,24 @@
 /* alloc.h */
 
-#define _GNU_SOURCE
+#include <stddef.h>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <string.h>
-#include <assert.h>
-#include <errno.h>
+#ifndef DEFAULT_WORD
+#define DEFAULT_WORD 2 * (sizeof(void *))
+#endif
 
-#define packed __attribute__((packed))
-#define unused __attribute__((unused))
-#define Maxwords ((1024 * 1024 * 1024 / 4) -1)
+#ifndef PAGE_SIZE
+#define PAGE_SIZE 4096
+#endif
 
-#define ErrNoMem 1
+typedef struct {
+    unsigned char * buf;
+    size_t cur_offset;
+    size_t arena_capacity; 
+} Arena;
 
-typedef unsigned char int8;
-typedef unsigned short int int16;
-typedef unsigned int int32;
-typedef unsigned long long int int64;
-typedef _BitInt(128) int128;
-typedef void heap;
-typedef int32 word;
+void arena_init(Arena *arena, size_t mem_size);
 
-struct packed s_header{
-    word w:30;
-    bool allocated:1;
-    bool reserved:1;
-};
+void* arena_alloc(Arena *arena, size_t allocation_size);
+void* arena_alloc_aligned(Arena *arena, size_t allocation_size, size_t alignment);
 
-typedef struct packed s_header header;
-
-#define $1 (int8)
-#define $2 (int16)
-#define $4 (int32)
-#define $8 (int64)
-#define $16 (int128)
-#define $c (char *)
-#define $i (int)
-#define $v (void *)
-#define $h (header *)
-
-#define reterr(x) errno = (x); return $v 0;
-void * alloc(int32);
+void arena_destroy(Arena *arena);
