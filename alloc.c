@@ -1,6 +1,8 @@
 #include "alloc.h"
 #include <assert.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 bool is_power_of_two(size_t x){
   return (x & (x-1)) == 0;
@@ -116,7 +118,8 @@ void* free_list_alloc_aligned(FreeList *list, size_t alloc_size, size_t alignmen
 
   cur_node = list->head;
   prev_node = NULL;
-
+  
+  // Traverse the free list identify node with enough capacity
   while (cur_node != NULL) {
     padding = calc_padding_with_header((uintptr_t) cur_node, alignment, sizeof(FreeListHeader));
     required_size = padding + alloc_size;
@@ -128,43 +131,49 @@ void* free_list_alloc_aligned(FreeList *list, size_t alloc_size, size_t alignmen
     prev_node = cur_node;
     cur_node = cur_node->next;
   }
+  
+  if(cur_node == NULL) {
+    assert(0 && "could not find free list node with required capacity.");
+    return NULL;
+  }
+  
 
-  if(cur_node) {
-    size_t cur_node_size = cur_node->block_size;
-    FreeListNode *next_node = cur_node->next;
+  size_t cur_node_size = cur_node->block_size;
+  FreeListNode *next_node = cur_node->next;
+  
+  uintptr_t cur_node_addr = (uintptr_t) cur_node;
+  uintptr_t alloc_aligned_addr = cur_node_addr + (uintptr_t) padding;
+  
+  // Set the header metedata
+  FreeListHeader *header = (FreeListHeader *)(alloc_aligned_addr - (uintptr_t) header_size);
+  header->alloc_size = alloc_size;
+  header->padding = padding;
+
+  size_t remaining_block_size = cur_node_size - (padding + alloc_size);
+  if(remaining_block_size >= node_size) {
     
-    uintptr_t cur_node_addr = (uintptr_t) cur_node;
-    uintptr_t alloc_aligned_addr = cur_node_addr + (uintptr_t) padding;
+    uintptr_t cur_node_resize_addr = (uintptr_t) cur_node + (uintptr_t) (padding + alloc_size);
+    cur_node = (FreeListNode *) cur_node_resize_addr;
+    cur_node->block_size = remaining_block_size;
+    cur_node->next = next_node;
+
     
-    FreeListHeader *header = (FreeListHeader *)(alloc_aligned_addr - (uintptr_t) header_size);
-    header->alloc_size = alloc_size;
-    header->padding = padding;
-
-    size_t remaining_blockk_size = cur_node_size - (padding + alloc_size);
-    if(remaining_blockk_size >= node_size) {
-      
-      uintptr_t cur_node_resize_addr = (uintptr_t) cur_node + (uintptr_t) (padding + alloc_size);
-      cur_node = (FreeListNode *) cur_node_resize_addr;
-      cur_node->block_size = remaining_blockk_size;
-      cur_node->next = next_node;
-      
-      if(prev_node)
-        prev_node->next = cur_node;
-    } else{
-      prev_node->next = next_node;
-    }
-
-    return  (void *) alloc_aligned_addr;
+    if(prev_node) prev_node->next = cur_node;
+    else list->head = cur_node;
+  } else{
+    if(prev_node) prev_node->next = next_node;
+    else list->head = next_node;
   }
 
-  return NULL;
+  return  (void *) alloc_aligned_addr;
+
 }
 
 void free_list_dealloc(FreeList *list, uintptr_t alloc_addr) {
-  assert(list != NULL);
-
   size_t padding, alloc_size, header_size = sizeof(FreeListHeader);
   FreeListHeader * header_ptr = (FreeListHeader *) (alloc_addr - (uintptr_t) header_size);
+
+  assert(list != NULL);
   
   padding = header_ptr->padding;
   alloc_size = header_ptr->alloc_size;
@@ -172,7 +181,7 @@ void free_list_dealloc(FreeList *list, uintptr_t alloc_addr) {
   uintptr_t block_addr = alloc_addr - (uintptr_t) padding;
   size_t block_size = alloc_size + padding;
   
-  // Reset the block
+  // Reset the memory block
   memset((void *)block_addr, 0, block_size);
   
   // Add the block meta data
@@ -180,7 +189,7 @@ void free_list_dealloc(FreeList *list, uintptr_t alloc_addr) {
   node->block_size = block_size;
   node->next = NULL;
 
-  // Add the block to the start of free list
+  // Add the block to the free list
   FreeListNode * first_node = list->head;
   
   list->head = node;

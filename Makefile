@@ -1,6 +1,5 @@
 CC = clang-19
-CFLAGS = -std=c23 -Wall -Wextra -pedantic -g -fdebug-prefix-map=$(PWD)=.
-
+CFLAGS = -std=c23 -Wall -Wextra -pedantic -g
 .PHONY: all clean
 
 all : clean alloc
