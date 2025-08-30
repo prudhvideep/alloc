@@ -169,16 +169,16 @@ void* free_list_alloc_aligned(FreeList *list, size_t alloc_size, size_t alignmen
 
 }
 
-void free_list_dealloc(FreeList *list, uintptr_t alloc_addr) {
+void free_list_dealloc(FreeList *list, void *alloc_addr) {
   size_t padding, alloc_size, header_size = sizeof(FreeListHeader);
-  FreeListHeader * header_ptr = (FreeListHeader *) (alloc_addr - (uintptr_t) header_size);
+  FreeListHeader * header_ptr = (FreeListHeader *) ((uintptr_t) alloc_addr - (uintptr_t) header_size);
 
   assert(list != NULL);
   
   padding = header_ptr->padding;
   alloc_size = header_ptr->alloc_size;
 
-  uintptr_t block_addr = alloc_addr - (uintptr_t) padding;
+  uintptr_t block_addr = (uintptr_t) alloc_addr - (uintptr_t) padding;
   size_t block_size = alloc_size + padding;
   
   // Reset the memory block
@@ -195,3 +195,4 @@ void free_list_dealloc(FreeList *list, uintptr_t alloc_addr) {
   list->head = node;
   node->next = first_node;
 }
+

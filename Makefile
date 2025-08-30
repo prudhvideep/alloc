@@ -1,5 +1,5 @@
 CC = clang-19
-CFLAGS = -std=c23 -Wall -Wextra -pedantic -g
+CFLAGS = -std=c23 -Wall -Wextra -pedantic
 .PHONY: all clean
 
 all : clean alloc

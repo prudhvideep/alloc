@@ -58,4 +58,4 @@ void free_list_destroy(FreeList *list);
 void* free_list_alloc(FreeList *list, size_t alloc_size);
 void* free_list_alloc_aligned(FreeList *list, size_t alloc_size, size_t alignment);
 
-void free_list_dealloc(FreeList *list,uintptr_t alloc_addr);
+void free_list_dealloc(FreeList *list, void *alloc_addr);
